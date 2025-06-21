@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
 import Register from './components/Register';
-import MainDashboard from './components/Maindashboard';
+import MainDashboard from './components/MainDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 
 const AppRoutes: React.FC = () => {

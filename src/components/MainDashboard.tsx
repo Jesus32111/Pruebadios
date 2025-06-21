@@ -10,9 +10,11 @@ import {
   BarChart3,
   Users,
   FileText,
-  Calendar
+  Calendar,
+  Building2
 } from 'lucide-react';
 import MachineryModule from './MachineryModule';
+import WarehouseModule from './WarehouseModule';
 
 const MainDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -26,6 +28,7 @@ const MainDashboard: React.FC = () => {
   const menuItems = [
     { id: 'home', name: 'Inicio', icon: Home },
     { id: 'machinery', name: 'Maquinarias', icon: Wrench },
+    { id: 'warehouses', name: 'Almacenes', icon: Building2 },
     { id: 'reports', name: 'Reportes', icon: BarChart3 },
     { id: 'clients', name: 'Clientes', icon: Users },
     { id: 'contracts', name: 'Contratos', icon: FileText },
@@ -36,6 +39,8 @@ const MainDashboard: React.FC = () => {
     switch (activeModule) {
       case 'machinery':
         return <MachineryModule />;
+      case 'warehouses':
+        return <WarehouseModule />;
       case 'home':
       default:
         return (
@@ -46,7 +51,7 @@ const MainDashboard: React.FC = () => {
                   <Wrench className="h-16 w-16 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">MaquiRent Pro</h1>
-                <p className="text-xl text-gray-600">Sistema de Gestión de Maquinarias</p>
+                <p className="text-xl text-gray-600">Sistema de Gestión de Maquinarias y Almacenes</p>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
@@ -62,6 +67,7 @@ const MainDashboard: React.FC = () => {
                       <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
                       <p className="text-gray-600 mt-2">
                         {item.id === 'machinery' && 'Gestiona tu flota de maquinarias'}
+                        {item.id === 'warehouses' && 'Administra tus almacenes'}
                         {item.id === 'reports' && 'Reportes y estadísticas'}
                         {item.id === 'clients' && 'Administra tus clientes'}
                         {item.id === 'contracts' && 'Contratos de alquiler'}

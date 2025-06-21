@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import authRoutes from './routes/auth.js';
 import machineryRoutes from './routes/machinery.js';
+import warehouseRoutes from './routes/warehouses.js';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/machinery', machineryRoutes);
+app.use('/api/warehouses', warehouseRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

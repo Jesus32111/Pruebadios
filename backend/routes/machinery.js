@@ -52,6 +52,7 @@ router.get('/', async (req, res) => {
       data: machineries
     });
   } catch (error) {
+    console.error('Error message:', error.message);
     console.error('Get machineries error:', error);
     console.error('Error stack:', error.stack);
     res.status(500).json({

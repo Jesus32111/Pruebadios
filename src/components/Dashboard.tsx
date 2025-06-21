@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Calendar, Shield, LogOut, Settings } from 'lucide-react';
+import { User, Mail, Calendar, Shield, LogOut, Settings, Package } from 'lucide-react'; // Added Package for warehouse icon
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -108,6 +109,10 @@ const Dashboard: React.FC = () => {
                   <Settings className="h-5 w-5 text-blue-600" />
                   <span className="text-gray-700">Account Settings</span>
                 </button>
+                <Link to="/warehouses" className="w-full flex items-center space-x-3 p-3 text-left hover:bg-blue-50 rounded-lg transition-colors">
+                  <Package className="h-5 w-5 text-blue-600" />
+                  <span className="text-gray-700">Almacenes</span>
+                </Link>
                 <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-green-50 rounded-lg transition-colors">
                   <Shield className="h-5 w-5 text-green-600" />
                   <span className="text-gray-700">Security Settings</span>

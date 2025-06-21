@@ -92,6 +92,8 @@ machinerySchema.index({ status: 1 });
 machinerySchema.index({ type: 1 });
 machinerySchema.index({ createdBy: 1 });
 machinerySchema.index({ purchaseDate: -1 });
+machinerySchema.index({ createdAt: -1 });
+
 
 const Machinery = mongoose.model('Machinery', machinerySchema);
 
