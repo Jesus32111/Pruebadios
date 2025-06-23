@@ -133,9 +133,9 @@ vehicleSchema.index({ brand: 1, model: 1 });
 vehicleSchema.index({ status: 1 });
 vehicleSchema.index({ warehouse: 1 });
 vehicleSchema.index({ createdBy: 1 });
+vehicleSchema.index({ createdAt: -1 });
 vehicleSchema.index({ soatExpiration: 1 });
 vehicleSchema.index({ technicalReviewExpiration: 1 });
-vehicleSchema.index({ createdAt: 1 });
 
 // Virtual for checking if SOAT is expired or expiring soon
 vehicleSchema.virtual('soatStatus').get(function() {
