@@ -23,19 +23,6 @@ const warehouseSchema = new mongoose.Schema({
       'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'
     ]
   },
-  status: {
-    type: String,
-    enum: ['Activo', 'Inactivo'],
-    default: 'Activo'
-  },
-  capacity: {
-    type: Number,
-    default: 0
-  },
-  contactEmail: {
-    type: String,
-    trim: true
-  },
   createdBy: { // ✅ Este campo es obligatorio para que populate funcione
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

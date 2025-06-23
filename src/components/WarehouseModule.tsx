@@ -23,12 +23,6 @@ interface Warehouse {
   name: string;
   address: string;
   department: string;
-  status: 'Activo' | 'Inactivo' | 'En Mantenimiento';
-  capacity?: number;
-  description?: string;
-  contactPhone?: string;
-  contactEmail?: string;
-  manager?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,19 +34,12 @@ const WarehouseModule: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
 
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     department: 'Lima',
-    status: 'Activo',
-    capacity: '',
-    description: '',
-    contactPhone: '',
-    contactEmail: '',
-    manager: ''
   });
 
   const departments = [
@@ -61,8 +48,6 @@ const WarehouseModule: React.FC = () => {
     'La Libertad', 'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios',
     'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'
   ];
-
-  const statusOptions = ['Activo', 'Inactivo', 'En Mantenimiento'];
 
   useEffect(() => {
     fetchWarehouses();
@@ -74,14 +59,12 @@ const WarehouseModule: React.FC = () => {
       setError(null);
       
       console.log('Fetching warehouses with filters:', {
-        status: statusFilter !== 'all' ? statusFilter : undefined,
         department: departmentFilter !== 'all' ? departmentFilter : undefined,
         search: searchTerm || undefined
       });
 
       const response = await apiClient.get('/warehouses', {
         params: {
-          status: statusFilter !== 'all' ? statusFilter : undefined,
           department: departmentFilter !== 'all' ? departmentFilter : undefined,
           search: searchTerm || undefined
         }
@@ -105,7 +88,7 @@ const WarehouseModule: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchTerm, statusFilter, departmentFilter]);
+  }, [searchTerm, departmentFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,11 +96,6 @@ const WarehouseModule: React.FC = () => {
       setError(null);
       const submitData = {
         ...formData,
-        capacity: formData.capacity ? parseFloat(formData.capacity.toString()) : undefined,
-        contactPhone: formData.contactPhone || undefined,
-        contactEmail: formData.contactEmail || undefined,
-        manager: formData.manager || undefined,
-        description: formData.description || undefined
       };
 
       console.log('Submitting warehouse data:', submitData);
@@ -147,12 +125,6 @@ const WarehouseModule: React.FC = () => {
       name: warehouse.name,
       address: warehouse.address,
       department: warehouse.department,
-      status: warehouse.status,
-      capacity: warehouse.capacity?.toString() || '',
-      description: warehouse.description || '',
-      contactPhone: warehouse.contactPhone || '',
-      contactEmail: warehouse.contactEmail || '',
-      manager: warehouse.manager || ''
     });
     setShowForm(true);
   };
@@ -177,39 +149,7 @@ const WarehouseModule: React.FC = () => {
       name: '',
       address: '',
       department: 'Lima',
-      status: 'Activo',
-      capacity: '',
-      description: '',
-      contactPhone: '',
-      contactEmail: '',
-      manager: ''
     });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Activo':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'Inactivo':
-        return <XCircle className="h-5 w-5 text-red-500" />;
-      case 'En Mantenimiento':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
-      default:
-        return <AlertCircle className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Activo':
-        return 'bg-green-100 text-green-800';
-      case 'Inactivo':
-        return 'bg-red-100 text-red-800';
-      case 'En Mantenimiento':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
   };
 
   if (loading) {
@@ -258,17 +198,6 @@ const WarehouseModule: React.FC = () => {
           </div>
           
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">Todos los estados</option>
-            {statusOptions.map(status => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-
-          <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -314,9 +243,6 @@ const WarehouseModule: React.FC = () => {
                   </h3>
                   <p className="text-sm text-gray-600">{warehouse.department}</p>
                 </div>
-                <div className="flex items-center space-x-1">
-                  {getStatusIcon(warehouse.status)}
-                </div>
               </div>
 
               <div className="space-y-2 mb-4">
@@ -324,47 +250,7 @@ const WarehouseModule: React.FC = () => {
                   <MapPin className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
                   <span className="line-clamp-2">{warehouse.address}</span>
                 </div>
-                
-                {warehouse.capacity && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Capacidad: {warehouse.capacity.toLocaleString()} m²
-                  </div>
-                )}
-
-                {warehouse.manager && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <User className="h-4 w-4 mr-2" />
-                    {warehouse.manager}
-                  </div>
-                )}
-
-                {warehouse.contactPhone && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Phone className="h-4 w-4 mr-2" />
-                    {warehouse.contactPhone}
-                  </div>
-                )}
-
-                {warehouse.contactEmail && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Mail className="h-4 w-4 mr-2" />
-                    {warehouse.contactEmail}
-                  </div>
-                )}
               </div>
-
-              <div className="flex items-center justify-between mb-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(warehouse.status)}`}>
-                  {warehouse.status}
-                </span>
-              </div>
-
-              {warehouse.description && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {warehouse.description}
-                </p>
-              )}
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                 <div className="flex space-x-2">
@@ -450,6 +336,20 @@ const WarehouseModule: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dirección *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Dirección completa del almacén"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Departamento *
                     </label>
                     <select
@@ -464,101 +364,6 @@ const WarehouseModule: React.FC = () => {
                     </select>
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dirección *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Dirección completa del almacén"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {statusOptions.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Capacidad (m²)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.capacity}
-                      onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Capacidad en metros cuadrados"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Encargado
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.manager}
-                      onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Nombre del encargado"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono de Contacto
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.contactPhone}
-                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Ej: +51 999 999 999"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email de Contacto
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.contactEmail}
-                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="email@ejemplo.com"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Descripción adicional del almacén..."
-                  />
                 </div>
 
                 <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">

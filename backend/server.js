@@ -4,10 +4,17 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
 import authRoutes from './routes/auth.js';
 import machineryRoutes from './routes/machinery.js';
 import warehouseRoutes from './routes/warehouses.js';
+import vehicleRoutes from './routes/vehicles.js';
+import fuelRoutes from './routes/fuel.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -46,6 +53,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Logging middleware for debugging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -60,6 +70,8 @@ app.use((req, res, next) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/machinery', machineryRoutes);
 app.use('/api/warehouses', warehouseRoutes);
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/fuel', fuelRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
