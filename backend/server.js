@@ -12,6 +12,10 @@ import machineryRoutes from './routes/machinery.js';
 import warehouseRoutes from './routes/warehouses.js';
 import vehicleRoutes from './routes/vehicles.js';
 import fuelRoutes from './routes/fuel.js';
+import toolsRoutes from './routes/tools.js';
+import partsRoutes from './routes/parts.js';
+import AlertRoutes from './routes/alerts.js';
+import FinanceRoutes from './routes/finance.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,6 +76,11 @@ app.use('/api/machinery', machineryRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/fuel', fuelRoutes);
+app.use('/api/tools', toolsRoutes);
+app.use('/api/parts', partsRoutes);
+app.use('/api/alerts', AlertRoutes);
+app.use('/api/finance', FinanceRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

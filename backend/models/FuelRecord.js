@@ -4,14 +4,14 @@ const fuelRecordSchema = new mongoose.Schema({
   vehicle: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vehicle',
-    required: function() {
+    required: function () {
       return !this.machinery;
     }
   },
   machinery: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Machinery',
-    required: function() {
+    required: function () {
       return !this.vehicle;
     }
   },
@@ -89,20 +89,27 @@ fuelRecordSchema.index({ 'gasStation.name': 1 });
 fuelRecordSchema.index({ createdAt: 1 });
 
 // Validate that either vehicle or machinery is provided, but not both
-fuelRecordSchema.pre('save', function(next) {
+fuelRecordSchema.pre('save', function (next) {
   if (this.vehicle && this.machinery) {
-    next(new Error('Cannot assign fuel record to both vehicle and machinery'));
+    return next(new Error('Cannot assign fuel record to both vehicle and machinery'));
   } else if (!this.vehicle && !this.machinery) {
-    next(new Error('Must assign fuel record to either vehicle or machinery'));
-  } else {
-    next();
+    return next(new Error('Must assign fuel record to either vehicle or machinery'));
   }
+  next();
 });
 
-// Calculate total cost before saving
-fuelRecordSchema.pre('save', function(next) {
-  this.totalCost = this.quantity * this.pricePerGallon;
-  next();
+// Calculate total cost before saving (robust version)
+fuelRecordSchema.pre('save', function (next) {
+  const qty = Number(this.quantity);
+  const price = Number(this.pricePerGallon);
+
+  if (!isNaN(qty) && !isNaN(price)) {
+    this.totalCost = qty * price;
+    return next();
+  }
+
+  this.invalidate('totalCost', 'Total cost could not be calculated due to invalid quantity or pricePerGallon');
+  next(new Error('Invalid quantity or pricePerGallon for totalCost calculation'));
 });
 
 const FuelRecord = mongoose.model('FuelRecord', fuelRecordSchema);

@@ -174,7 +174,7 @@ router.post('/',
       .isFloat({ min: 0 })
       .withMessage('Current mileage must be a positive number'),
     body('status')
-      .isIn(['Disponible', 'Mantenimiento', 'No Disponible'])
+      .isIn(['Operativo', 'En Mantenimiento', 'No Disponible', 'Fuera de Servicio'])
       .withMessage('Invalid status'),
     body('soatExpiration')
       .isISO8601()
@@ -359,7 +359,7 @@ router.put('/:id',
       .withMessage('Current mileage must be a positive number'),
     body('status')
       .optional()
-      .isIn(['Disponible', 'Mantenimiento', 'No Disponible'])
+      .isIn(['Operativo', 'En Mantenimiento', 'No Disponible', 'Fuera de Servicio'])
       .withMessage('Invalid status'),
     body('warehouse')
       .optional()

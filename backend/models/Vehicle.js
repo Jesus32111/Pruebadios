@@ -163,8 +163,8 @@ vehicleSchema.virtual('technicalReviewStatus').get(function() {
 vehicleSchema.virtual('needsAttention').get(function() {
   const soatStatus = this.soatStatus;
   const techStatus = this.technicalReviewStatus;
-  const hasCriticalMaintenance = this.pendingMaintenance.some(m => m.priority === 'Crítica');
-  
+  const hasCriticalMaintenance = (this.pendingMaintenance || []).some(m => m.priority === 'Crítica');
+
   return soatStatus === 'expired' || techStatus === 'expired' || hasCriticalMaintenance;
 });
 

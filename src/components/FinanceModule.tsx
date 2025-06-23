@@ -6,131 +6,129 @@ import {
   Edit, 
   Trash2, 
   Eye,
-  Fuel,
-  Calendar,
+  DollarSign,
   TrendingUp,
+  TrendingDown,
+  Calendar,
   BarChart3,
   AlertCircle,
   XCircle,
   ChevronLeft,
   ChevronRight,
-  Car,
-  Wrench
+  Download
 } from 'lucide-react';
 import { apiClient } from '../context/AuthContext';
 
-interface Vehicle {
+interface FinanceRecord {
   _id: string;
-  plate: string;
-  brand: string;
-  model: string;
-  year: number;
-}
-
-interface Machinery {
-  _id: string;
-  brand: string;
-  model: string;
-  serialNumber: string;
-  type: string;
-}
-
-interface FuelRecord {
-  _id: string;
-  vehicle?: Vehicle;
-  machinery?: Machinery;
-  quantity: number;
-  pricePerGallon: number;
-  totalCost: number;
-  gasStation: {
-    name: string;
-    address?: string;
-  };
-  fuelDate: string;
-  currentMileage?: number;
-  currentHours?: number;
-  fuelType: string;
+  type: 'Ingreso' | 'Egreso';
+  category: string;
+  subcategory?: string;
+  description: string;
+  amount: number;
+  date: string;
+  paymentMethod: string;
+  reference?: string;
+  sourceType: string;
+  sourceId?: string;
+  tags?: string[];
   notes?: string;
-  receiptNumber?: string;
+  isRecurring: boolean;
+  recurringConfig?: {
+    frequency: string;
+    nextDate: string;
+    endDate?: string;
+    isActive: boolean;
+  };
   createdAt: string;
 }
 
-interface FuelStats {
+interface FinanceStats {
   summary: {
-    totalRecords: number;
-    totalGallons: number;
-    totalCost: number;
-    averagePricePerGallon: number;
-    maxPricePerGallon: number;
-    minPricePerGallon: number;
+    totalIncome: number;
+    totalExpenses: number;
+    netIncome: number;
+    period: string;
   };
-  fuelByType: Array<{
+  incomeByCategory: Array<{
     _id: string;
-    totalGallons: number;
-    totalCost: number;
-    records: number;
+    total: number;
+    count: number;
   }>;
-  topGasStations: Array<{
+  expensesByCategory: Array<{
     _id: string;
-    totalGallons: number;
-    totalCost: number;
-    visits: number;
+    total: number;
+    count: number;
   }>;
-  period: string;
+  monthlyTrend: Array<{
+    _id: {
+      year: number;
+      month: number;
+      type: string;
+    };
+    total: number;
+  }>;
 }
 
-const FuelModule: React.FC = () => {
-  const [fuelRecords, setFuelRecords] = useState<FuelRecord[]>([]);
-  const [stats, setStats] = useState<FuelStats | null>(null);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [machineries, setMachineries] = useState<Machinery[]>([]);
+const FinanceModule: React.FC = () => {
+  const [financeRecords, setFinanceRecords] = useState<FinanceRecord[]>([]);
+  const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<FuelRecord | null>(null);
-  const [viewingRecord, setViewingRecord] = useState<FuelRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<FinanceRecord | null>(null);
+  const [viewingRecord, setViewingRecord] = useState<FinanceRecord | null>(null);
   
   // Filters and pagination
   const [searchTerm, setSearchTerm] = useState('');
-  const [vehicleFilter, setVehicleFilter] = useState('all');
-  const [machineryFilter, setMachineryFilter] = useState('all');
-  const [fuelTypeFilter, setFuelTypeFilter] = useState('all');
-  const [gasStationFilter, setGasStationFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('month');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   const [formData, setFormData] = useState({
-    equipmentType: 'vehicle', // 'vehicle' or 'machinery'
-    vehicle: '',
-    machinery: '',
-    quantity: '',
-    pricePerGallon: '',
-    gasStationName: '',
-    gasStationAddress: '',
-    fuelDate: new Date().toISOString().split('T')[0],
-    currentMileage: '',
-    currentHours: '',
-    fuelType: 'Diesel B5',
+    type: 'Ingreso',
+    category: '',
+    subcategory: '',
+    description: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'Efectivo',
+    reference: '',
     notes: '',
-    receiptNumber: ''
+    isRecurring: false,
+    recurringFrequency: 'Mensual',
+    recurringEndDate: ''
   });
 
-  const fuelTypes = [
-    'Gasolina 84', 'Gasolina 90', 'Gasolina 95', 'Gasolina 97',
-    'Diesel B5', 'Diesel B20', 'GLP', 'GNV'
+  const paymentMethods = [
+    'Efectivo', 'Transferencia', 'Cheque', 'Tarjeta de Crédito', 
+    'Tarjeta de Débito', 'Yape', 'Plin', 'Otro'
   ];
 
-  const [gasStations, setGasStations] = useState<string[]>([]);
+  const recurringFrequencies = [
+    'Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Semestral', 'Anual'
+  ];
+
+  const commonIncomeCategories = [
+    'Alquileres', 'Servicios', 'Ventas', 'Intereses', 'Otros Ingresos'
+  ];
+
+  const commonExpenseCategories = [
+    'Combustible', 'Mantenimiento', 'Seguros', 'Servicios Públicos', 
+    'Salarios', 'Alquiler', 'Suministros', 'Marketing', 'Otros Gastos'
+  ];
 
   useEffect(() => {
-    fetchFuelRecords();
+    fetchFinanceRecords();
     fetchStats();
-    fetchVehicles();
-    fetchMachineries();
-  }, [currentPage, searchTerm, vehicleFilter, machineryFilter, fuelTypeFilter, gasStationFilter]);
+  }, [currentPage, searchTerm, typeFilter, categoryFilter, paymentMethodFilter, startDate, endDate]);
 
   useEffect(() => {
     fetchStats();
@@ -138,62 +136,45 @@ const FuelModule: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await apiClient.get('/fuel/stats', {
-        params: { period: periodFilter }
+      const response = await apiClient.get('/finance/stats', {
+        params: { 
+          period: periodFilter,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }
       });
       setStats(response.data.data);
     } catch (error: any) {
-      console.error('Error fetching fuel stats:', error);
+      console.error('Error fetching finance stats:', error);
     }
   };
 
-  const fetchVehicles = async () => {
-    try {
-      const response = await apiClient.get('/vehicles');
-      setVehicles(response.data.data || []);
-    } catch (error: any) {
-      console.error('Error fetching vehicles:', error);
-    }
-  };
-
-  const fetchMachineries = async () => {
-    try {
-      const response = await apiClient.get('/machinery');
-      setMachineries(response.data.data || []);
-    } catch (error: any) {
-      console.error('Error fetching machineries:', error);
-    }
-  };
-
-  const fetchFuelRecords = async () => {
+  const fetchFinanceRecords = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await apiClient.get('/fuel', {
+      const response = await apiClient.get('/finance', {
         params: {
           page: currentPage,
           limit: itemsPerPage,
-          vehicleId: vehicleFilter !== 'all' ? vehicleFilter : undefined,
-          machineryId: machineryFilter !== 'all' ? machineryFilter : undefined,
-          fuelType: fuelTypeFilter !== 'all' ? fuelTypeFilter : undefined,
-          gasStation: gasStationFilter !== 'all' ? gasStationFilter : undefined,
+          type: typeFilter !== 'all' ? typeFilter : undefined,
+          category: categoryFilter !== 'all' ? categoryFilter : undefined,
+          paymentMethod: paymentMethodFilter !== 'all' ? paymentMethodFilter : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
           search: searchTerm || undefined
         }
       });
       
-      setFuelRecords(response.data.data || []);
+      setFinanceRecords(response.data.data || []);
       setTotalPages(response.data.pages || 1);
       setTotalItems(response.data.total || 0);
-
-      // Extract unique gas stations for filter
-      const uniqueStations = [...new Set(response.data.data.map((record: FuelRecord) => record.gasStation.name))];
-      setGasStations(uniqueStations);
     } catch (error: any) {
-      console.error('Error fetching fuel records:', error);
-      const errorMessage = error.response?.data?.message || 'Error al cargar los registros de combustible';
+      console.error('Error fetching finance records:', error);
+      const errorMessage = error.response?.data?.message || 'Error al cargar los registros financieros';
       setError(errorMessage);
-      setFuelRecords([]);
+      setFinanceRecords([]);
     } finally {
       setLoading(false);
     }
@@ -205,55 +186,48 @@ const FuelModule: React.FC = () => {
       setError(null);
       
       const submitData = {
-        [formData.equipmentType]: formData.equipmentType === 'vehicle' ? formData.vehicle : formData.machinery,
-        quantity: parseFloat(formData.quantity || '0'),
-        pricePerGallon: parseFloat(formData.pricePerGallon || '0'),
-        gasStation: {
-          name: formData.gasStationName,
-          address: formData.gasStationAddress || undefined
-        },
-        fuelDate: formData.fuelDate,
-        currentMileage: formData.currentMileage ? parseFloat(formData.currentMileage) : undefined,
-        currentHours: formData.currentHours ? parseFloat(formData.currentHours) : undefined,
-        fuelType: formData.fuelType,
-        notes: formData.notes || undefined,
-        receiptNumber: formData.receiptNumber || undefined
+        ...formData,
+        amount: parseFloat(formData.amount),
+        recurringConfig: formData.isRecurring ? {
+          frequency: formData.recurringFrequency,
+          endDate: formData.recurringEndDate || undefined,
+          isActive: true
+        } : undefined
       };
 
       if (editingRecord) {
-        await apiClient.put(`/fuel/${editingRecord._id}`, submitData);
+        await apiClient.put(`/finance/${editingRecord._id}`, submitData);
       } else {
-        await apiClient.post('/fuel', submitData);
+        await apiClient.post('/finance', submitData);
       }
 
       setShowForm(false);
       setEditingRecord(null);
       resetForm();
-      fetchFuelRecords();
+      fetchFinanceRecords();
       fetchStats();
     } catch (error: any) {
-      console.error('Error saving fuel record:', error);
-      const errorMessage = error.response?.data?.message || 'Error al guardar el registro de combustible';
+      console.error('Error saving finance record:', error);
+      const errorMessage = error.response?.data?.message || 'Error al guardar el registro financiero';
       setError(errorMessage);
     }
   };
 
-  const handleEdit = (record: FuelRecord) => {
+  const handleEdit = (record: FinanceRecord) => {
     setEditingRecord(record);
     setFormData({
-      equipmentType: record.vehicle ? 'vehicle' : 'machinery',
-      vehicle: record.vehicle?._id || '',
-      machinery: record.machinery?._id || '',
-      quantity: record.quantity.toString(),
-      pricePerGallon: record.pricePerGallon.toString(),
-      gasStationName: record.gasStation.name,
-      gasStationAddress: record.gasStation.address || '',
-      fuelDate: record.fuelDate.split('T')[0],
-      currentMileage: record.currentMileage?.toString() || '',
-      currentHours: record.currentHours?.toString() || '',
-      fuelType: record.fuelType,
+      type: record.type,
+      category: record.category,
+      subcategory: record.subcategory || '',
+      description: record.description,
+      amount: record.amount.toString(),
+      date: record.date.split('T')[0],
+      paymentMethod: record.paymentMethod,
+      reference: record.reference || '',
       notes: record.notes || '',
-      receiptNumber: record.receiptNumber || ''
+      isRecurring: record.isRecurring,
+      recurringFrequency: record.recurringConfig?.frequency || 'Mensual',
+      recurringEndDate: record.recurringConfig?.endDate ? record.recurringConfig.endDate.split('T')[0] : ''
     });
     setShowForm(true);
   };
@@ -262,11 +236,11 @@ const FuelModule: React.FC = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este registro?')) {
       try {
         setError(null);
-        await apiClient.delete(`/fuel/${id}`);
-        fetchFuelRecords();
+        await apiClient.delete(`/finance/${id}`);
+        fetchFinanceRecords();
         fetchStats();
       } catch (error: any) {
-        console.error('Error deleting fuel record:', error);
+        console.error('Error deleting finance record:', error);
         const errorMessage = error.response?.data?.message || 'Error al eliminar el registro';
         setError(errorMessage);
       }
@@ -275,19 +249,18 @@ const FuelModule: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      equipmentType: 'vehicle',
-      vehicle: '',
-      machinery: '',
-      quantity: '',
-      pricePerGallon: '',
-      gasStationName: '',
-      gasStationAddress: '',
-      fuelDate: new Date().toISOString().split('T')[0],
-      currentMileage: '',
-      currentHours: '',
-      fuelType: 'Diesel B5',
+      type: 'Ingreso',
+      category: '',
+      subcategory: '',
+      description: '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      paymentMethod: 'Efectivo',
+      reference: '',
       notes: '',
-      receiptNumber: ''
+      isRecurring: false,
+      recurringFrequency: 'Mensual',
+      recurringEndDate: ''
     });
   };
 
@@ -302,11 +275,21 @@ const FuelModule: React.FC = () => {
     return new Date(dateString).toLocaleDateString('es-PE');
   };
 
-  if (loading && fuelRecords.length === 0) {
+  const getTypeColor = (type: string) => {
+    return type === 'Ingreso' ? 'text-green-600' : 'text-red-600';
+  };
+
+  const getTypeIcon = (type: string) => {
+    return type === 'Ingreso' ? 
+      <TrendingUp className="h-4 w-4 text-green-500" /> : 
+      <TrendingDown className="h-4 w-4 text-red-500" />;
+  };
+
+  if (loading && financeRecords.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="ml-4 text-gray-600">Cargando registros de combustible...</span>
+        <span className="ml-4 text-gray-600">Cargando registros financieros...</span>
       </div>
     );
   }
@@ -316,21 +299,30 @@ const FuelModule: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Control de Combustible</h1>
-          <p className="text-gray-600">Gestiona el consumo de combustible por máquina y vehículo</p>
+          <h1 className="text-2xl font-bold text-gray-900">Control Financiero</h1>
+          <p className="text-gray-600">Gestiona ingresos y egresos del negocio</p>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingRecord(null);
-            resetForm();
-            setError(null);
-          }}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Nuevo Registro
-        </button>
+        <div className="flex space-x-3 mt-4 sm:mt-0">
+          <button
+            onClick={() => {/* TODO: Implement export */}}
+            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <Download className="h-5 w-5 mr-2" />
+            Exportar
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditingRecord(null);
+              resetForm();
+              setError(null);
+            }}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nuevo Registro
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -339,20 +331,9 @@ const FuelModule: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Galones</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.summary.totalGallons.toFixed(1)}</p>
-                <p className="text-sm text-gray-500">{periodFilter === 'day' ? 'Hoy' : periodFilter === 'week' ? 'Esta semana' : 'Este mes'}</p>
-              </div>
-              <Fuel className="h-12 w-12 text-blue-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Costo Total</p>
-                <p className="text-3xl font-bold text-green-600">{formatCurrency(stats.summary.totalCost)}</p>
-                <p className="text-sm text-gray-500">{stats.summary.totalRecords} registros</p>
+                <p className="text-sm font-medium text-gray-600">Ingresos</p>
+                <p className="text-3xl font-bold text-green-600">{formatCurrency(stats.summary.totalIncome)}</p>
+                <p className="text-sm text-gray-500">{stats.summary.period === 'day' ? 'Hoy' : stats.summary.period === 'week' ? 'Esta semana' : stats.summary.period === 'month' ? 'Este mes' : 'Este año'}</p>
               </div>
               <TrendingUp className="h-12 w-12 text-green-600" />
             </div>
@@ -361,22 +342,35 @@ const FuelModule: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Precio Promedio</p>
-                <p className="text-3xl font-bold text-purple-600">{formatCurrency(stats.summary.averagePricePerGallon)}</p>
-                <p className="text-sm text-gray-500">por galón</p>
+                <p className="text-sm font-medium text-gray-600">Egresos</p>
+                <p className="text-3xl font-bold text-red-600">{formatCurrency(stats.summary.totalExpenses)}</p>
+                <p className="text-sm text-gray-500">{stats.summary.period === 'day' ? 'Hoy' : stats.summary.period === 'week' ? 'Esta semana' : stats.summary.period === 'month' ? 'Este mes' : 'Este año'}</p>
               </div>
-              <BarChart3 className="h-12 w-12 text-purple-600" />
+              <TrendingDown className="h-12 w-12 text-red-600" />
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Precio Máximo</p>
-                <p className="text-3xl font-bold text-red-600">{formatCurrency(stats.summary.maxPricePerGallon)}</p>
-                <p className="text-sm text-gray-500">por galón</p>
+                <p className="text-sm font-medium text-gray-600">Balance Neto</p>
+                <p className={`text-3xl font-bold ${stats.summary.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(stats.summary.netIncome)}
+                </p>
+                <p className="text-sm text-gray-500">Ingresos - Egresos</p>
               </div>
-              <AlertCircle className="h-12 w-12 text-red-600" />
+              <BarChart3 className="h-12 w-12 text-blue-600" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Registros</p>
+                <p className="text-3xl font-bold text-blue-600">{totalItems}</p>
+                <p className="text-sm text-gray-500">Movimientos</p>
+              </div>
+              <DollarSign className="h-12 w-12 text-blue-600" />
             </div>
           </div>
         </div>
@@ -394,6 +388,7 @@ const FuelModule: React.FC = () => {
             <option value="day">Hoy</option>
             <option value="week">Esta semana</option>
             <option value="month">Este mes</option>
+            <option value="year">Este año</option>
           </select>
         </div>
       </div>
@@ -416,64 +411,53 @@ const FuelModule: React.FC = () => {
           </div>
           
           <select
-            value={vehicleFilter}
+            value={typeFilter}
             onChange={(e) => {
-              setVehicleFilter(e.target.value);
+              setTypeFilter(e.target.value);
               setCurrentPage(1);
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="all">Todos los vehículos</option>
-            {vehicles.map(vehicle => (
-              <option key={vehicle._id} value={vehicle._id}>
-                {vehicle.plate} - {vehicle.brand} {vehicle.model}
-              </option>
-            ))}
+            <option value="all">Todos los tipos</option>
+            <option value="Ingreso">Ingresos</option>
+            <option value="Egreso">Egresos</option>
           </select>
 
           <select
-            value={machineryFilter}
+            value={paymentMethodFilter}
             onChange={(e) => {
-              setMachineryFilter(e.target.value);
+              setPaymentMethodFilter(e.target.value);
               setCurrentPage(1);
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="all">Todas las máquinas</option>
-            {machineries.map(machinery => (
-              <option key={machinery._id} value={machinery._id}>
-                {machinery.brand} {machinery.model} - {machinery.serialNumber}
-              </option>
+            <option value="all">Todos los métodos</option>
+            {paymentMethods.map(method => (
+              <option key={method} value={method}>{method}</option>
             ))}
           </select>
 
-          <select
-            value={fuelTypeFilter}
+          <input
+            type="date"
+            value={startDate}
             onChange={(e) => {
-              setFuelTypeFilter(e.target.value);
+              setStartDate(e.target.value);
               setCurrentPage(1);
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">Todos los combustibles</option>
-            {fuelTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+            placeholder="Fecha inicio"
+          />
 
-          <select
-            value={gasStationFilter}
+          <input
+            type="date"
+            value={endDate}
             onChange={(e) => {
-              setGasStationFilter(e.target.value);
+              setEndDate(e.target.value);
               setCurrentPage(1);
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">Todos los grifos</option>
-            {gasStations.map(station => (
-              <option key={station} value={station}>{station}</option>
-            ))}
-          </select>
+            placeholder="Fecha fin"
+          />
 
           <div className="flex items-center text-sm text-gray-600">
             <Filter className="h-4 w-4 mr-2" />
@@ -498,29 +482,26 @@ const FuelModule: React.FC = () => {
         </div>
       )}
 
-      {/* Fuel Records Table */}
+      {/* Finance Records Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Equipo
+                  Tipo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Combustible
+                  Descripción
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cantidad
+                  Categoría
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Precio/Galón
+                  Monto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Grifo
+                  Método
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha
@@ -531,50 +512,45 @@ const FuelModule: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {fuelRecords.map((record) => (
+              {financeRecords.map((record) => (
                 <tr key={record._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {record.vehicle ? (
-                        <Car className="h-5 w-5 text-blue-500 mr-2" />
-                      ) : (
-                        <Wrench className="h-5 w-5 text-orange-500 mr-2" />
-                      )}
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {record.vehicle 
-                            ? `${record.vehicle.plate}`
-                            : `${record.machinery?.brand} ${record.machinery?.model}`
-                          }
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {record.vehicle 
-                            ? `${record.vehicle.brand} ${record.vehicle.model}`
-                            : record.machinery?.serialNumber
-                          }
-                        </div>
-                      </div>
+                      {getTypeIcon(record.type)}
+                      <span className={`ml-2 text-sm font-medium ${getTypeColor(record.type)}`}>
+                        {record.type}
+                      </span>
                     </div>
                   </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900">
+                      {record.description}
+                    </div>
+                    {record.reference && (
+                      <div className="text-sm text-gray-500">
+                        Ref: {record.reference}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {record.fuelType}
+                    <div className="text-sm text-gray-900">{record.category}</div>
+                    {record.subcategory && (
+                      <div className="text-sm text-gray-500">{record.subcategory}</div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`text-sm font-medium ${getTypeColor(record.type)}`}>
+                      {record.type === 'Egreso' ? '-' : '+'}{formatCurrency(record.amount)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {record.quantity.toFixed(2)} gal
+                    {record.paymentMethod}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(record.pricePerGallon)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(record.totalCost)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {record.gasStation.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(record.fuelDate)}
+                    {formatDate(record.date)}
+                    {record.isRecurring && (
+                      <div className="text-xs text-blue-600">Recurrente</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -682,11 +658,11 @@ const FuelModule: React.FC = () => {
       </div>
 
       {/* Empty State */}
-      {fuelRecords.length === 0 && !loading && !error && (
+      {financeRecords.length === 0 && !loading && !error && (
         <div className="text-center py-12">
-          <Fuel className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros de combustible</h3>
-          <p className="text-gray-600 mb-6">Comienza registrando tu primer consumo de combustible</p>
+          <DollarSign className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros financieros</h3>
+          <p className="text-gray-600 mb-6">Comienza registrando tu primer ingreso o egreso</p>
           <button
             onClick={() => {
               setShowForm(true);
@@ -708,10 +684,10 @@ const FuelModule: React.FC = () => {
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowForm(false)} />
             
-            <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
+            <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-gray-900">
-                  {editingRecord ? 'Editar Registro de Combustible' : 'Nuevo Registro de Combustible'}
+                  {editingRecord ? 'Editar Registro Financiero' : 'Nuevo Registro Financiero'}
                 </h3>
                 <button
                   onClick={() => setShowForm(false)}
@@ -722,84 +698,63 @@ const FuelModule: React.FC = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Equipment Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Equipo *
+                      Tipo *
                     </label>
                     <select
                       required
-                      value={formData.equipmentType}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        equipmentType: e.target.value,
-                        vehicle: '',
-                        machinery: ''
-                      })}
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="vehicle">Vehículo</option>
-                      <option value="machinery">Maquinaria</option>
+                      <option value="Ingreso">Ingreso</option>
+                      <option value="Egreso">Egreso</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {formData.equipmentType === 'vehicle' ? 'Vehículo' : 'Maquinaria'} *
+                      Categoría *
                     </label>
                     <select
                       required
-                      value={formData.equipmentType === 'vehicle' ? formData.vehicle : formData.machinery}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        [formData.equipmentType]: e.target.value 
-                      })}
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="">Seleccionar {formData.equipmentType === 'vehicle' ? 'vehículo' : 'maquinaria'}</option>
-                      {formData.equipmentType === 'vehicle' 
-                        ? vehicles.map(vehicle => (
-                            <option key={vehicle._id} value={vehicle._id}>
-                              {vehicle.plate} - {vehicle.brand} {vehicle.model}
-                            </option>
-                          ))
-                        : machineries.map(machinery => (
-                            <option key={machinery._id} value={machinery._id}>
-                              {machinery.brand} {machinery.model} - {machinery.serialNumber}
-                            </option>
-                          ))
-                      }
+                      <option value="">Seleccionar categoría</option>
+                      {(formData.type === 'Ingreso' ? commonIncomeCategories : commonExpenseCategories).map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cantidad (Galones) *
+                      Subcategoría
                     </label>
                     <input
-                      type="number"
-                      required
-                      min="0.1"
-                      step="0.01"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      type="text"
+                      value={formData.subcategory}
+                      onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="0.00"
+                      placeholder="Subcategoría opcional"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Precio por Galón (PEN) *
+                      Monto (PEN) *
                     </label>
                     <input
                       type="number"
                       required
                       min="0.01"
                       step="0.01"
-                      value={formData.pricePerGallon}
-                      onChange={(e) => setFormData({ ...formData, pricePerGallon: e.target.value })}
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="0.00"
                     />
@@ -807,106 +762,103 @@ const FuelModule: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Grifo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.gasStationName}
-                      onChange={(e) => setFormData({ ...formData, gasStationName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Ej: Primax, Repsol, Petroperú"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dirección del Grifo
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.gasStationAddress}
-                      onChange={(e) => setFormData({ ...formData, gasStationAddress: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Dirección del grifo"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Carga *
+                      Fecha *
                     </label>
                     <input
                       type="date"
                       required
-                      value={formData.fuelDate}
-                      onChange={(e) => setFormData({ ...formData, fuelDate: e.target.value })}
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Combustible *
+                      Método de Pago *
                     </label>
                     <select
                       required
-                      value={formData.fuelType}
-                      onChange={(e) => setFormData({ ...formData, fuelType: e.target.value })}
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {fuelTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                      {paymentMethods.map(method => (
+                        <option key={method} value={method}>{method}</option>
                       ))}
                     </select>
                   </div>
 
-                  {formData.equipmentType === 'vehicle' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Kilometraje Actual
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={formData.currentMileage}
-                        onChange={(e) => setFormData({ ...formData, currentMileage: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Kilometraje actual"
-                      />
-                    </div>
-                  )}
-
-                  {formData.equipmentType === 'machinery' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Horas Actuales
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={formData.currentHours}
-                        onChange={(e) => setFormData({ ...formData, currentHours: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Horas de uso actuales"
-                      />
-                    </div>
-                  )}
-
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Número de Recibo
+                      Descripción *
                     </label>
                     <input
                       type="text"
-                      value={formData.receiptNumber}
-                      onChange={(e) => setFormData({ ...formData, receiptNumber: e.target.value })}
+                      required
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Número del recibo o factura"
+                      placeholder="Descripción del movimiento financiero"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Referencia
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.reference}
+                      onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Número de factura, recibo, etc."
+                    />
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isRecurring"
+                      checked={formData.isRecurring}
+                      onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-900">
+                      Movimiento recurrente
+                    </label>
+                  </div>
+
+                  {formData.isRecurring && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Frecuencia
+                        </label>
+                        <select
+                          value={formData.recurringFrequency}
+                          onChange={(e) => setFormData({ ...formData, recurringFrequency: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {recurringFrequencies.map(frequency => (
+                            <option key={frequency} value={frequency}>{frequency}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Fecha de Finalización
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.recurringEndDate}
+                          onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -917,22 +869,10 @@ const FuelModule: React.FC = () => {
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Notas adicionales sobre la carga de combustible..."
+                      placeholder="Notas adicionales..."
                     />
                   </div>
                 </div>
-
-                {/* Total Cost Display */}
-                {formData.quantity && formData.pricePerGallon && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-blue-800">Costo Total:</span>
-                      <span className="text-lg font-bold text-blue-900">
-                        {formatCurrency(parseFloat(formData.quantity) * parseFloat(formData.pricePerGallon))}
-                      </span>
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
                   <button
@@ -973,64 +913,61 @@ const FuelModule: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Equipo</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {viewingRecord.vehicle 
-                        ? `${viewingRecord.vehicle.plate} - ${viewingRecord.vehicle.brand} ${viewingRecord.vehicle.model}`
-                        : `${viewingRecord.machinery?.brand} ${viewingRecord.machinery?.model} - ${viewingRecord.machinery?.serialNumber}`
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Tipo de Combustible</label>
-                    <p className="mt-1 text-sm text-gray-900">{viewingRecord.fuelType}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Cantidad</label>
-                    <p className="mt-1 text-sm text-gray-900">{viewingRecord.quantity.toFixed(2)} galones</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Precio por Galón</label>
-                    <p className="mt-1 text-sm text-gray-900">{formatCurrency(viewingRecord.pricePerGallon)}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Costo Total</label>
-                    <p className="mt-1 text-sm font-medium text-gray-900">{formatCurrency(viewingRecord.totalCost)}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Fecha</label>
-                    <p className="mt-1 text-sm text-gray-900">{formatDate(viewingRecord.fuelDate)}</p>
-                  </div>
+                <div className="flex items-center">
+                  {getTypeIcon(viewingRecord.type)}
+                  <span className={`ml-2 text-lg font-semibold ${getTypeColor(viewingRecord.type)}`}>
+                    {viewingRecord.type}
+                  </span>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Grifo</label>
-                  <p className="mt-1 text-sm text-gray-900">{viewingRecord.gasStation.name}</p>
-                  {viewingRecord.gasStation.address && (
-                    <p className="text-sm text-gray-600">{viewingRecord.gasStation.address}</p>
-                  )}
+                  <label className="block text-sm font-medium text-gray-500">Descripción</label>
+                  <p className="mt-1 text-sm text-gray-900">{viewingRecord.description}</p>
                 </div>
 
-                {(viewingRecord.currentMileage || viewingRecord.currentHours) && (
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      {viewingRecord.currentMileage ? 'Kilometraje' : 'Horas'}
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {viewingRecord.currentMileage 
-                        ? `${viewingRecord.currentMileage.toLocaleString()} km`
-                        : `${viewingRecord.currentHours} horas`
-                      }
+                    <label className="block text-sm font-medium text-gray-500">Categoría</label>
+                    <p className="mt-1 text-sm text-gray-900">{viewingRecord.category}</p>
+                    {viewingRecord.subcategory && (
+                      <p className="text-sm text-gray-600">{viewingRecord.subcategory}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Monto</label>
+                    <p className={`mt-1 text-sm font-medium ${getTypeColor(viewingRecord.type)}`}>
+                      {formatCurrency(viewingRecord.amount)}
                     </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Fecha</label>
+                    <p className="mt-1 text-sm text-gray-900">{formatDate(viewingRecord.date)}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Método de Pago</label>
+                    <p className="mt-1 text-sm text-gray-900">{viewingRecord.paymentMethod}</p>
+                  </div>
+                </div>
+
+                {viewingRecord.reference && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Referencia</label>
+                    <p className="mt-1 text-sm text-gray-900">{viewingRecord.reference}</p>
                   </div>
                 )}
 
-                {viewingRecord.receiptNumber && (
+                {viewingRecord.isRecurring && viewingRecord.recurringConfig && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Número de Recibo</label>
-                    <p className="mt-1 text-sm text-gray-900">{viewingRecord.receiptNumber}</p>
+                    <label className="block text-sm font-medium text-gray-500">Recurrencia</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {viewingRecord.recurringConfig.frequency}
+                      {viewingRecord.recurringConfig.endDate && (
+                        <span> hasta {formatDate(viewingRecord.recurringConfig.endDate)}</span>
+                      )}
+                    </p>
                   </div>
                 )}
 
@@ -1040,6 +977,11 @@ const FuelModule: React.FC = () => {
                     <p className="mt-1 text-sm text-gray-900">{viewingRecord.notes}</p>
                   </div>
                 )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">Creado</label>
+                  <p className="mt-1 text-sm text-gray-900">{formatDate(viewingRecord.createdAt)}</p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
@@ -1067,4 +1009,4 @@ const FuelModule: React.FC = () => {
   );
 };
 
-export default FuelModule;
+export default FinanceModule;

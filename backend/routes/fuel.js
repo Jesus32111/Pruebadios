@@ -350,6 +350,24 @@ router.post('/', [
       createdBy: req.user._id
     };
 
+    const qty = Number(fuelRecordData.quantity);
+    const price = Number(fuelRecordData.pricePerGallon);
+
+    if (isNaN(qty) || isNaN(price)) {
+    return res.status(400).json({
+        success: false,
+        message: 'Cantidad y precio por galón deben ser valores numéricos válidos.'
+    });
+    }
+
+    // Calcula el totalCost si no se envió
+    if (!fuelRecordData.totalCost) {
+    fuelRecordData.totalCost = qty * price;
+    }
+
+    console.log('Received for new fuel record:');
+    console.log('Quantity:', req.body.quantity, typeof req.body.quantity);
+    console.log('Price per Gallon:', req.body.pricePerGallon, typeof req.body.pricePerGallon);
     console.log('Creating fuel record with data:', fuelRecordData);
 
     const fuelRecord = new FuelRecord(fuelRecordData);
